@@ -124,8 +124,8 @@ const ctpAuthUrl = process.env.AUTH_URL;
 const ctpApiUrl = process.env.API_URL;
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
-console.log("CTP Project Key:", projectKey);
-console.log("CTP API URL:", ctpApiUrl);
+//console.log("CTP Project Key:", projectKey);
+//console.log("CTP API URL:", ctpApiUrl);
 
 const authString = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 const tokenUrl = `${ctpAuthUrl}/oauth/token?grant_type=client_credentials`;
@@ -146,14 +146,14 @@ async function getToken() {
     }
 
     const tokenResponseData = await tokenResponse.json();
-    console.log('Access Token:', tokenResponseData.access_token);
+    //console.log('Access Token:', tokenResponseData.access_token);
     return tokenResponseData.access_token;
 }
 (async () => {
     try {
         const accessToken = await getToken();
 
-        const client = createClient({
+        /*const client = createClient({
             middlewares: [
                 createAuthForClientCredentialsFlow({
                     host: ctpAuthUrl,
@@ -169,11 +169,10 @@ async function getToken() {
                     fetch,
                 }),
             ],
-        });
+        });*/
 
         const getClient = () => {
             console.log("Reached client");
-            console.log("CTP_AUTH_URL:", ctpAuthUrl); // Log the CTP Auth URL
             const authMiddleware = createAuthForClientCredentialsFlow({
                 host: ctpAuthUrl,
                 projectKey: projectKey,
@@ -209,7 +208,6 @@ async function getToken() {
                         }*/
                     })
                     .execute();
-                console.log("Get Products");
                 res.json(response.body.results);
             } catch (error) {
                 console.error('Error fetching products:', error);
@@ -222,7 +220,7 @@ async function getToken() {
                 const response = await getClient()
                     .withProjectKey({ projectKey })
                     .products()
-                    .withId(id)
+                    .withId({ ID: id })
                     .get()
                     .execute();
                 res.json(response.body);

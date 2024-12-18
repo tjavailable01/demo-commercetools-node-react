@@ -1,4 +1,4 @@
-const express = require('express');
+/*const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const dotenv = require('dotenv');
@@ -115,9 +115,9 @@ async function getToken() {
     } catch (error) {
         console.error('Error starting server:', error);
     }
-})();
+})();*/
 
-/*const { createClient, createHttpClient, createAuthForClientCredentialsFlow, ClientBuilder } = require('@commercetools/sdk-client-v2');
+const { createClient, createHttpClient, createAuthForClientCredentialsFlow, ClientBuilder } = require('@commercetools/sdk-client-v2');
 const { createApiBuilderFromCtpClient } = require('@commercetools/platform-sdk');
 const fetch = require('node-fetch');
 const dotenv = require('dotenv');
@@ -167,7 +167,7 @@ async function getToken() {
     try {
         const accessToken = await getToken();
 
-        /!*const client = createClient({
+        /*const client = createClient({
             middlewares: [
                 createAuthForClientCredentialsFlow({
                     host: ctpAuthUrl,
@@ -183,7 +183,7 @@ async function getToken() {
                     fetch,
                 }),
             ],
-        });*!/
+        });*/
 
         const getClient = () => {
             console.log("Reached client");
@@ -216,10 +216,10 @@ async function getToken() {
                     .withProjectKey({ projectKey })
                     .products()
                     .get({
-                        /!*queryArgs: {
+                        /*queryArgs: {
                             limit: perPage,
                             offset: (page - 1) * perPage
-                        }*!/
+                        }*/
                     })
                     .execute();
                 res.json(response.body.results);
@@ -244,6 +244,22 @@ async function getToken() {
             }
         });
 
+        app.get('/api/categories/:id', async (req, res) => {
+            const { id } = req.params;
+            try {
+                const response = await getClient()
+                    .withProjectKey({ projectKey })
+                    .categories()
+                    .withId({ ID: id })
+                    .get()
+                    .execute();
+                res.json(response.body);
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+                res.status(500).send('Error fetching categories');
+            }
+        });
+
         app.listen(port, () => {
             console.log(`Server running on port ${port}`);
         });
@@ -253,4 +269,4 @@ async function getToken() {
     } catch (error) {
         console.error('Error starting server:', error);
     }
-})();*/
+})();

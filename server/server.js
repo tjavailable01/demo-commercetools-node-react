@@ -209,19 +209,49 @@ async function getToken() {
             return createApiBuilderFromCtpClient(client);
         };
 
-        app.get('/api/products', async (req, res) => {
+        /*app.get('/api/products', async (req, res) => {
             try {
                 console.log("Get Products");
                 const response = await getClient()
                     .withProjectKey({ projectKey })
                     .products()
                     .get({
-                        /*queryArgs: {
+                        /!*queryArgs: {
                             limit: perPage,
                             offset: (page - 1) * perPage
-                        }*/
+                        }*!/
                     })
                     .execute();
+                res.json(response.body.results);
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                res.status(500).send('Error fetching products');
+            }
+        });*/
+        app.get('/api/products', async (req, res) => {
+            const { page = 1, limit = 10, category = '' } = req.query;
+            const offset = (page - 1) * limit;
+            const where = category ? `masterData(current(categories(id="${category}")))` : undefined;
+            try {
+                let queryArgs = {
+                    limit,
+                    offset,
+                    ...(where && { where }),
+                };
+
+                if (category) {
+                    //queryArgs['where'] = `categories(id="${category}")`;
+                    //queryArgs['where'] = `masterData.current.categories(id="${category}")`
+                }
+
+                console.log("Get Products with queryArgs:", queryArgs);
+
+                const response = await getClient()
+                    .withProjectKey({ projectKey })
+                    .products()
+                    .get({ queryArgs })
+                    .execute();
+
                 res.json(response.body.results);
             } catch (error) {
                 console.error('Error fetching products:', error);
@@ -241,6 +271,24 @@ async function getToken() {
             } catch (error) {
                 console.error('Error fetching product:', error);
                 res.status(500).send('Error fetching product');
+            }
+        });
+
+        app.get('/api/categories', async (req, res) => {
+            const limit = 200;
+            try {
+                let queryArgs = {
+                    limit
+                };
+                const response = await getClient()
+                    .withProjectKey({ projectKey })
+                    .categories()
+                    .get({ queryArgs })
+                    .execute();
+                res.json(response.body.results);
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+                res.status(500).send('Error fetching categories');
             }
         });
 

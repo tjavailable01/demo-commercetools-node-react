@@ -28,8 +28,8 @@ export const getCategories = async (id) => {
     return response.data;
 };
 
-export const registerUser = async (email, password) => {
-    const response = await api.post('/register', { email, password });
+export const registerUser = async (email, password, firstName, lastName, key) => {
+    const response = await api.post('/register', { email, password, firstName, lastName, key });
     return response.data;
 };
 
@@ -37,3 +37,32 @@ export const loginUser = async (email, password) => {
     const response = await api.post('/login', { email, password });
     return response.data;
 };
+
+export const addToCart = async (customerId, productId, variantId, quantity) => {
+    const response = await api.post('/cart/add', { customerId, productId, variantId, quantity });
+    return response.data;
+};
+
+export const getCartByCustomerId = async (customerId, token) => {
+    console.log("Cart Page 2");
+    console.log("customerId", customerId);
+    console.log("token", token);
+    const response = await api.get('/cart', {
+        params: { customerId, token },
+        headers: {
+            'Authorization': `Bearer ${token}`
+        }
+    });
+    return response.data;
+};
+
+export const removeFromCart = async (cartId, lineItemId, token) => {
+    const response = await api.delete('/cart/remove', {
+        data: { cartId, lineItemId },
+        headers: { 'Authorization': `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+
+

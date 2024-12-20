@@ -1,15 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { getProductById, getCategoryById } from '../api';
+import { getProductById, getCategoryById, addToCart, removeFromCart } from '../api';
 
 const ProductDetails = () => {
     const { id } = useParams();
+    const [message, setMessage] = useState('');
     const [categoryDetails, setCategoryDetails] = useState([]);
     const [ancestorDetails, setAncestorDetails] = useState([]);
     const [product, setProduct] = useState(null);
+    const [customerId, setCustomerId] = useState(null);
+    const [token, setToken] = useState(null);
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const isLoggedIn = Boolean(localStorage.getItem('token'));
 
     useEffect(() => {
         //Function to Fetch Product Details
@@ -35,6 +39,9 @@ const ProductDetails = () => {
                 setAncestorDetails(ancestors);
                 //Stop the loader
                 setLoading(false);
+                setCustomerId(localStorage.getItem('customerId'));
+                setToken(localStorage.getItem('token'));
+
             } catch (err) {
                 console.log("Error fetching product details:", err);
                 setError('Error fetching product details');
@@ -81,10 +88,8 @@ const ProductDetails = () => {
 
     //Get Product Variations
     const handleVariantChange = (variantId) => {
-        //console.log("variantId", variantId);
         //Get Product variant Details
         const selected = product.masterData.current.variants.find(v => v.sku === variantId) || product.masterData.current.masterVariant;
-        //console.log("variant", selected);
         //Save Product variant Details
         setSelectedVariant(selected);
     };
@@ -97,7 +102,16 @@ const ProductDetails = () => {
         const attribute = attributes.find(attr => attr.name === name);
         return attribute ? attribute.value : 'N/A';
     };
-
+    const handleAddToCart = async (customerId, productId, variantId, quantity) => {
+        try {
+            // const quantity = 1;
+            const response = await addToCart(customerId, productId, variantId, quantity);
+            setMessage('Product added to cart successfully.');
+        } catch (error) {
+            console.log("Error",error);
+            setMessage('Error adding product to cart.');
+        }
+    };
 
     return (
         <div className="product-detail">
@@ -129,6 +143,13 @@ const ProductDetails = () => {
                     <li key={ancestor.id}>{ancestor.name.en}</li>
                 ))}
             </ul>
+            {isLoggedIn ? (
+                <div>
+                    <button onClick={() => handleAddToCart(customerId, product.id, selectedVariant.id, 1)}>Add to Cart</button>
+                </div>
+            ) : (
+                <p><a href="/login">Log In to Add Items to Cart</a></p>
+            )}
         </div>
     );
 };

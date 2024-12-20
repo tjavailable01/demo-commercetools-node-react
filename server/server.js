@@ -315,14 +315,17 @@ async function getToken() {
                 return res.status(400).json({ errors: errors.array() });
             }
 
-            const { email, password } = req.body;
-            const hashedPassword = await bcrypt.hash(password, 10);
+            const { email, password, firstName, lastName, key } = req.body;
+            //const hashedPassword = await bcrypt.hash(password, 10);
 
             try {
                 const client = getClient();
                 const customerDraft = {
+                    firstName,
+                    lastName,
                     email,
-                    password: hashedPassword,
+                    password,
+                    key
                 };
 
                 const response = await client.withProjectKey({ projectKey })
@@ -369,15 +372,161 @@ async function getToken() {
                 });
 
                 if (!response.ok) {
+                    //console.log("Response status:", response.status, response.statusText);
+                    //console.log("Response body:", await response.text());
                     return res.status(400).json({ message: 'Invalid credentials' });
                 }
 
                 const responseData = await response.json();
-                res.json({ message: 'Login successful', token: responseData.access_token });
+                const newApiUrl = `${ctpApiUrl}/${projectKey}/me`;
+                const headersWithBearer = {
+                    'Authorization': `Bearer ${responseData.access_token}`
+                };
+
+                const getUserResponse = await fetch(newApiUrl, {
+                    method: 'GET',
+                    headers: headersWithBearer,
+                });
+
+                if (!getUserResponse.ok) {
+                    //console.log("GetUserResponse status:", getUserResponse.status, getUserResponse.statusText);
+                    //console.log("GetUserResponse body:", await getUserResponse.text());
+                    return res.status(400).json({ message: 'Invalid Token' });
+                }
+
+                const getUserResponseData = await getUserResponse.json();
+                res.json({
+                    message: 'Login successful',
+                    token: responseData.access_token,
+                    customerId: getUserResponseData.id
+                });
             } catch (error) {
+                //console.error('Error logging in:', error);
                 res.status(500).json({ message: 'Error logging in', error });
             }
         });
+
+        // Add to Cart Endpoint
+        app.post('/api/cart/add', async (req, res) => {
+            const { customerId, productId, variantId, quantity } = req.body;
+            console.log("Add Items to cart");
+            console.log("customerId",customerId);
+            console.log("productId",productId);
+            console.log("variantId",variantId);
+            console.log("quantity",quantity);
+            try {
+                const client = getClient();
+                // Create or fetch the cart
+                let cart;
+                const cartResponse = await client
+                    .withProjectKey({ projectKey })
+                    .carts()
+                    .withCustomerId({ customerId })
+                    .get()
+                    .execute()
+                    .catch(() => {
+                        //If cart doesn't exist, create a new one
+                        return getClient()
+                            .withProjectKey({ projectKey })
+                            .carts()
+                            .post({ body: { currency: 'EUR', customerId } })
+                            .execute();
+                    });
+                cart = cartResponse.body;
+                console.log("Cart Response", cartResponse.body);
+
+                // Add line item to the cart
+                const addItemResponse = await client
+                    .withProjectKey({ projectKey })
+                    .carts()
+                    .withId({ ID: cart.id })
+                    .post({
+                        body: {
+                            version: cart.version,
+                            actions: [
+                                {
+                                    action: 'addLineItem',
+                                    productId: productId,
+                                    variantId: variantId,
+                                    quantity: parseInt(quantity)
+                                }
+                            ]
+                        }
+                    })
+                    .execute();
+                res.json(addItemResponse.body);
+            } catch (error) {
+                console.log("Error adding to cart",error);
+                res.status(500).json({ message: 'Error adding to cart', error });
+            }
+        });
+
+        // Remove from Cart Endpoint
+        app.post('/api/cart/remove', async (req, res) => {
+            const { customerId, lineItemId } = req.body;
+            try {
+                const client = getClient();
+                // Fetch the cart
+                const cartResponse = await client
+                    .withProjectKey({ projectKey })
+                    .carts()
+                    .withCustomerId({ customerId })
+                    //.get({ queryArgs: { where: `customerId="${customerId}"` } })
+                    .get()
+                    .execute();
+                if (cartResponse.body.results.length === 0) {
+                    return res.status(400).json({ message: 'Cart not found' });
+                }
+                // const cart = cartResponse.body.results[0];
+                const cart = cartResponse.body;
+                // Remove line item from the cart
+                const removeItemResponse = await client.withProjectKey({ projectKey })
+                    .carts()
+                    .withId({ ID: cart.id })
+                    .post({
+                        body: {
+                            version: cart.version,
+                            actions: [
+                                {
+                                    action: 'removeLineItem',
+                                    lineItemId: lineItemId
+                                }
+                            ]
+                        }
+                    })
+                    .execute();
+                res.json(removeItemResponse.body);
+            } catch (error) {
+                res.status(500).json({ message: 'Error removing from cart', error });
+            }
+        });
+
+        // Api Endpoint to fetch cart items for each user
+        app.get('/api/cart', async (req, res) => {
+            const { customerId, token } = req.query;
+            console.log("Cart Page 1");
+            console.log("customerId", customerId);
+            console.log("token", token);
+            try {
+                const response = await getClient()
+                    .withProjectKey({ projectKey })
+                    .carts()
+                    .withCustomerId(customerId)
+                    .get(
+                        /*{
+                            headers: {
+                                'Authorization': `Bearer ${token}`
+                            }
+                        }*/
+                    )
+                    .execute();
+                res.json(response.body);
+            } catch (error) {
+                console.error('Error fetching cart items:', error);
+                res.status(500).send('Error fetching cart items');
+            }
+        });
+
 
         app.listen(port, () => {
             console.log(`Server running on port ${port}`);
@@ -388,4 +537,5 @@ async function getToken() {
     } catch (error) {
         console.error('Error starting server:', error);
     }
+
 })();

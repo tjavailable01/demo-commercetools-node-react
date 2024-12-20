@@ -6,15 +6,18 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "body-parser": "^1.20.3",
-    "cors": "^2.8.5",
-    "dotenv": "^10.0.0",
-    "express": "^4.17.1",
-    "node-fetch": "^2.6.1",
+    "@commercetools/platform-sdk": "^2.6.0",
     "@commercetools/sdk-client": "^3.0.0",
     "@commercetools/sdk-client-v2": "^2.5.0",
     "@commercetools/sdk-middleware-auth": "^7.0.1",
     "@commercetools/sdk-middleware-http": "^7.0.4",
-    "@commercetools/platform-sdk": "^2.6.0"
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.3",
+    "cors": "^2.8.5",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "express-validator": "^7.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "node-fetch": "^2.7.0"
   }
 }

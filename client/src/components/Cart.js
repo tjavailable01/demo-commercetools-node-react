@@ -13,9 +13,6 @@ const Cart = () => {
         const fetchCart = async () => {
             try {
                 const response = await getCartByCustomerId(customerId, token);
-                console.log("Cart Page 3");
-                console.log("customerId", customerId);
-                console.log("token", token);
                 setCart(response);
                 setLoading(false);
             } catch (error) {

@@ -137,6 +137,41 @@ async function getToken() {
     } catch (error) {
         console.error('Error starting server:', error);
     }
+
+        // Api Endpoint to fetch cart items for each user
+        app.get('/api/cart', async (req, res) => {
+            const { customerId, token } = req.query;
+            try {
+                const client = createClient({
+                    middlewares: [
+                        createAuthForClientCredentialsFlow({
+                            host: ctpAuthUrl,
+                            projectKey,
+                            credentials: {
+                                clientId,
+                                clientSecret,
+                            },
+                            fetch,
+                        }),
+                        createHttpClient({
+                            host: ctpApiUrl,
+                            fetch,
+                        }),
+                    ],
+                });
+                const response = await client.execute({
+                    uri: `/${projectKey}/carts/customer-id=${customerId}`,
+                    method: 'GET',
+                });
+                res.json(response.body);
+                //console.log("Response",response.body);
+            } catch (error) {
+                console.error('Error fetching cart items:', error);
+                res.status(500).send('Error fetching cart items');
+            }
+        });
+
+
 })();*/
 
 const { createClient, createHttpClient, createAuthForClientCredentialsFlow } = require('@commercetools/sdk-client-v2');
@@ -409,11 +444,6 @@ async function getToken() {
         // Add to Cart Endpoint
         app.post('/api/cart/add', async (req, res) => {
             const { customerId, productId, variantId, quantity } = req.body;
-            console.log("Add Items to cart");
-            console.log("customerId",customerId);
-            console.log("productId",productId);
-            console.log("variantId",variantId);
-            console.log("quantity",quantity);
             try {
                 const client = getClient();
                 // Create or fetch the cart
@@ -462,23 +492,33 @@ async function getToken() {
         });
 
         // Remove from Cart Endpoint
-        app.post('/api/cart/remove', async (req, res) => {
-            const { customerId, lineItemId } = req.body;
+        app.delete('/api/cart/remove', async (req, res) => {
+            const { cartId, lineItemId, token } = req.body;
+            console.log("Remove cart items");
+            console.log("lineItemId", lineItemId);
+            console.log("token", token);
             try {
                 const client = getClient();
                 // Fetch the cart
-                const cartResponse = await client
+                const response = await client
                     .withProjectKey({ projectKey })
                     .carts()
-                    .withCustomerId({ customerId })
-                    //.get({ queryArgs: { where: `customerId="${customerId}"` } })
-                    .get()
+                    .withId({ ID: cartId })
+                    .get({
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
                     .execute();
-                if (cartResponse.body.results.length === 0) {
-                    return res.status(400).json({ message: 'Cart not found' });
+
+                const cart = response.body;
+
+                // Check if the line item exists
+                const lineItem = cart.lineItems.find(item => item.id === lineItemId);
+                if (!lineItem) {
+                    return res.status(400).json({ message: 'Line item not found in cart' });
                 }
-                // const cart = cartResponse.body.results[0];
-                const cart = cartResponse.body;
+
                 // Remove line item from the cart
                 const removeItemResponse = await client.withProjectKey({ projectKey })
                     .carts()
@@ -492,33 +532,36 @@ async function getToken() {
                                     lineItemId: lineItemId
                                 }
                             ]
+                        },
+                        headers: {
+                            'Authorization': `Bearer ${token}`
                         }
                     })
                     .execute();
+
                 res.json(removeItemResponse.body);
             } catch (error) {
+                console.error('Error removing from cart:', error);
                 res.status(500).json({ message: 'Error removing from cart', error });
             }
         });
 
         // Api Endpoint to fetch cart items for each user
         app.get('/api/cart', async (req, res) => {
-            const { customerId, token } = req.query;
+            const { customerId, token } = req.query; // Use req.query instead of req.params
             console.log("Cart Page 1");
             console.log("customerId", customerId);
             console.log("token", token);
             try {
-                const response = await getClient()
-                    .withProjectKey({ projectKey })
+                const client = getClient();
+                const response = await client.withProjectKey({ projectKey })
                     .carts()
-                    .withCustomerId(customerId)
-                    .get(
-                        /*{
-                            headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
-                        }*/
-                    )
+                    .withCustomerId({ customerId })
+                    .get({
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        }
+                    })
                     .execute();
                 res.json(response.body);
             } catch (error) {
@@ -526,7 +569,6 @@ async function getToken() {
                 res.status(500).send('Error fetching cart items');
             }
         });
-
 
         app.listen(port, () => {
             console.log(`Server running on port ${port}`);

@@ -58,7 +58,7 @@ export const getCartByCustomerId = async (customerId, token) => {
 
 export const removeFromCart = async (cartId, lineItemId, token) => {
     const response = await api.delete('/cart/remove', {
-        data: { cartId, lineItemId },
+        data: { cartId, lineItemId, token },
         headers: { 'Authorization': `Bearer ${token}` }
     });
     return response.data;
